@@ -1,47 +1,39 @@
 package com.example.temp_miau
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.temp_miau.ui.theme.Temp_miauTheme
+import androidx.lifecycle.lifecycleScope
+import com.example.temp_miau.data.DatasetBuilder // <-- Cambiamos al DatasetBuilder
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        // Llamamos a la función que descarga el dataset de 100 recetas
+        probarDatasetBuilder()
+
         setContent {
-            Temp_miauTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            // Aquí irá la interfaz visual de tu app
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    private fun probarDatasetBuilder() {
+        val builder = DatasetBuilder(applicationContext)
+        lifecycleScope.launch {
+            try {
+                Log.d("MIAU_DATASET", "Iniciando la descarga del dataset de 100 recetas...")
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    Temp_miauTheme {
-        Greeting("Android")
+                // Ejecutamos la construcción con meta de 100 platos
+                val totalGuardados = builder.buildDataset(targetGoal = 100)
+
+                Log.d("MIAU_DATASET", "¡Proceso finalizado! Total de recetas guardadas: $totalGuardados")
+            } catch (e: Exception) {
+                Log.e("MIAU_DATASET", "Error en el dataset: ${e.message}")
+                e.printStackTrace()
+            }
+        }
     }
 }

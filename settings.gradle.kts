@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Temp_miau"
+rootProject.name = "MiauPlanner"
 include(":app")
  
