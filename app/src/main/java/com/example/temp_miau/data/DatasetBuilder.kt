@@ -8,7 +8,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.File
 import com.example.temp_miau.BuildConfig
 
 class DatasetBuilder(private val context: Context) {
@@ -22,9 +21,9 @@ class DatasetBuilder(private val context: Context) {
         "cheese", "chocolate", "bread", "curry", "tacos", "pizza", "cake"
     )
 
-    suspend fun buildDataset(targetGoal: Int = 20): Int = withContext(Dispatchers.IO) {
+    suspend fun buildDataset(targetGoal: Int = 20): List<Recipe> = withContext(Dispatchers.IO) {
         var collectedCount = 0
-        val datasetDir = File(context.filesDir, "recipe_dataset").apply { mkdirs() }
+        val recipesList = mutableListOf<Recipe>()
 
         for (query in searchQueries) {
             if (collectedCount >= targetGoal) break
@@ -89,8 +88,7 @@ class DatasetBuilder(private val context: Context) {
                             sourceUrl = sourceUrl
                         )
 
-                        val file = File(datasetDir, "recipe_$id.json")
-                        file.writeText(Json.encodeToString(Recipe.serializer(), recipe))
+                        recipesList.add(recipe)
                         collectedCount++
                         Log.d("DATASET_SAVED", "¡Guardada con éxito!: $title (ID: $id)")
                     }
@@ -102,7 +100,7 @@ class DatasetBuilder(private val context: Context) {
             }
         }
 
-        Log.d("DATASET", "¡Dataset construido con éxito! Total de recetas guardadas: $collectedCount")
-        return@withContext collectedCount
+        Log.d("DATASET", "¡Dataset construido con éxito! Total de recetas guardadas: ${recipesList.size}")
+        return@withContext recipesList
     }
 }
