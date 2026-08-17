@@ -9,9 +9,9 @@ import kotlinx.serialization.Serializable
 data class Recipe(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-
     val title: String,
     val ingredients: List<String>,
     val instructions: List<String>,
-    val sourceUrl: String
+    val sourceUrl: String,
+    val dificultad: String = "medio"
 )

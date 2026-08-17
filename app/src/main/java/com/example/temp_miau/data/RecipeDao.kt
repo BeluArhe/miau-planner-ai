@@ -18,6 +18,9 @@ interface RecipeDao {
     @Query("SELECT * FROM recipes")
     suspend fun getAllRecipes(): List<Recipe>
 
+    @Query("SELECT * FROM recipes WHERE dificultad = :nivel")
+    suspend fun getRecipesByDificultad(nivel: String): List<Recipe>
+
     @Query("SELECT * FROM recipes WHERE id = :id")
     suspend fun getRecipeById(id: Int): Recipe?
 

@@ -8,6 +8,9 @@ import androidx.lifecycle.lifecycleScope
 import com.example.temp_miau.data.AppDatabase
 import com.example.temp_miau.data.DatasetBuilder
 import kotlinx.coroutines.launch
+import com.example.temp_miau.data.RecipeDao
+import com.example.temp_miau.logic.RecommendationEngine
+import com.example.temp_miau.logic.RespuestasEntrevista
 
 class MainActivity : ComponentActivity() {
 
@@ -42,29 +45,25 @@ class MainActivity : ComponentActivity() {
                 )
 
                 val recetasExistentes = recipeDao.getAllRecipes()
-                if (recetasExistentes.isNotEmpty()) {
+                if (recetasExistentes.isEmpty()) {
+                    // 1. Descargar las recetas desde Spoonacular
+                    val recipes = builder.buildDataset(targetGoal = 100)
+                    Log.d(
+                        "MIAU_ROOM",
+                        "Recetas descargadas: ${recipes.size}"
+                    )
+                    // 2. Guardar las recetas en Room
+                    recipeDao.insertRecipes(recipes)
+                    Log.d(
+                        "MIAU_ROOM",
+                        "Recetas insertadas en Room: ${recipes.size}"
+                    )
+                } else {
                     Log.d(
                         "MIAU_ROOM",
                         "Ya hay ${recetasExistentes.size} recetas en Room. No se vuelve a llamar a la API."
                     )
-                    return@launch
                 }
-
-                // 1. Descargar las recetas desde Spoonacular
-                val recipes = builder.buildDataset(targetGoal = 100)
-
-                Log.d(
-                    "MIAU_ROOM",
-                    "Recetas descargadas: ${recipes.size}"
-                )
-
-                // 2. Guardar las recetas en Room
-                recipeDao.insertRecipes(recipes)
-
-                Log.d(
-                    "MIAU_ROOM",
-                    "Recetas insertadas en Room: ${recipes.size}"
-                )
 
                 // 3. Recuperar las recetas desde Room
                 val storedRecipes = recipeDao.getAllRecipes()
@@ -82,7 +81,7 @@ class MainActivity : ComponentActivity() {
                         "ID=${recipe.id} | ${recipe.title}"
                     )
                 }
-
+                probarRecommendationEngine(recipeDao)
                 Log.d(
                     "MIAU_ROOM",
                     "========================================"
@@ -96,6 +95,35 @@ class MainActivity : ComponentActivity() {
                     e
                 )
             }
+
         }
+    }
+
+    private suspend fun probarRecommendationEngine(recipeDao: RecipeDao) {
+        Log.d("MIAU_ENGINE", "========================================")
+        Log.d("MIAU_ENGINE", "Iniciando prueba de RecommendationEngine")
+
+        val respuestasDePrueba = RespuestasEntrevista(
+            tiempoDisponible = 1,
+            nivelEnergia = 2,
+            frecuenciaActividad = 1,
+            estadoBienestar = 1,
+            experienciaCocinando = 0
+        )
+
+        val engine = RecommendationEngine()
+        val nivelCalculado = engine.calcularNivel(respuestasDePrueba)
+        val dificultadString = engine.nivelToDificultadString(nivelCalculado)
+
+        Log.d("MIAU_ENGINE", "Nivel calculado: $nivelCalculado ($dificultadString)")
+
+        val recetasFiltradas = recipeDao.getRecipesByDificultad(dificultadString)
+        Log.d("MIAU_ENGINE", "Recetas encontradas con dificultad '$dificultadString': ${recetasFiltradas.size}")
+
+        recetasFiltradas.take(5).forEach { recipe ->
+            Log.d("MIAU_ENGINE", "ID=${recipe.id} | ${recipe.title} | dificultad=${recipe.dificultad}")
+        }
+
+        Log.d("MIAU_ENGINE", "========================================")
     }
 }

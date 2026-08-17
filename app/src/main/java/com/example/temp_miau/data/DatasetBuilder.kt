@@ -54,6 +54,14 @@ class DatasetBuilder(private val context: Context) {
                         val title = recipeObj["title"]?.jsonPrimitive?.content ?: "Sin título"
                         val sourceUrl = recipeObj["sourceUrl"]?.jsonPrimitive?.content ?: ""
 
+                        val readyInMinutes = recipeObj["readyInMinutes"]?.jsonPrimitive?.intOrNull ?: 30
+                        val dificultad = when {
+                            readyInMinutes <= 20 -> "facil"
+                            readyInMinutes <= 45 -> "medio"
+                            else -> "dificil"
+                        }
+
+
                         // Extracción flexible de ingredientes
                         val ingredientsList = mutableListOf<String>()
                         recipeObj["extendedIngredients"]?.jsonArray?.forEach { ing ->
@@ -85,7 +93,8 @@ class DatasetBuilder(private val context: Context) {
                             title = title,
                             ingredients = ingredientsList,
                             instructions = instructionsList,
-                            sourceUrl = sourceUrl
+                            sourceUrl = sourceUrl,
+                            dificultad = dificultad
                         )
 
                         recipesList.add(recipe)
