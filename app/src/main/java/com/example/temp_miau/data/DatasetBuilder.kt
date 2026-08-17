@@ -9,10 +9,12 @@ import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import com.example.temp_miau.BuildConfig
 
 class DatasetBuilder(private val context: Context) {
     private val client = OkHttpClient()
-    private val apiKey = "18e84b9f175248d4bcc784353c4f9396"
+
+    private val apiKey = BuildConfig.SPOONACULAR_API_KEY
 
     private val searchQueries = listOf(
         "chicken", "pasta", "beef", "salad", "soup", "rice", "fish",
