@@ -8,11 +8,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.File
+import com.example.temp_miau.BuildConfig
 
 class DatasetBuilder(private val context: Context) {
     private val client = OkHttpClient()
-    private val apiKey = "18e84b9f175248d4bcc784353c4f9396"
+
+    private val apiKey = BuildConfig.SPOONACULAR_API_KEY
 
     private val searchQueries = listOf(
         "chicken", "pasta", "beef", "salad", "soup", "rice", "fish",
@@ -20,9 +21,9 @@ class DatasetBuilder(private val context: Context) {
         "cheese", "chocolate", "bread", "curry", "tacos", "pizza", "cake"
     )
 
-    suspend fun buildDataset(targetGoal: Int = 20): Int = withContext(Dispatchers.IO) {
+    suspend fun buildDataset(targetGoal: Int = 20): List<Recipe> = withContext(Dispatchers.IO) {
         var collectedCount = 0
-        val datasetDir = File(context.filesDir, "recipe_dataset").apply { mkdirs() }
+        val recipesList = mutableListOf<Recipe>()
 
         for (query in searchQueries) {
             if (collectedCount >= targetGoal) break
@@ -52,6 +53,14 @@ class DatasetBuilder(private val context: Context) {
                         val id = recipeObj["id"]?.jsonPrimitive?.int ?: continue
                         val title = recipeObj["title"]?.jsonPrimitive?.content ?: "Sin título"
                         val sourceUrl = recipeObj["sourceUrl"]?.jsonPrimitive?.content ?: ""
+
+                        val readyInMinutes = recipeObj["readyInMinutes"]?.jsonPrimitive?.intOrNull ?: 30
+                        val dificultad = when {
+                            readyInMinutes <= 20 -> "facil"
+                            readyInMinutes <= 45 -> "medio"
+                            else -> "dificil"
+                        }
+
 
                         // Extracción flexible de ingredientes
                         val ingredientsList = mutableListOf<String>()
@@ -84,11 +93,11 @@ class DatasetBuilder(private val context: Context) {
                             title = title,
                             ingredients = ingredientsList,
                             instructions = instructionsList,
-                            sourceUrl = sourceUrl
+                            sourceUrl = sourceUrl,
+                            dificultad = dificultad
                         )
 
-                        val file = File(datasetDir, "recipe_$id.json")
-                        file.writeText(Json.encodeToString(Recipe.serializer(), recipe))
+                        recipesList.add(recipe)
                         collectedCount++
                         Log.d("DATASET_SAVED", "¡Guardada con éxito!: $title (ID: $id)")
                     }
@@ -100,7 +109,7 @@ class DatasetBuilder(private val context: Context) {
             }
         }
 
-        Log.d("DATASET", "¡Dataset construido con éxito! Total de recetas guardadas: $collectedCount")
-        return@withContext collectedCount
+        Log.d("DATASET", "¡Dataset construido con éxito! Total de recetas guardadas: ${recipesList.size}")
+        return@withContext recipesList
     }
 }
