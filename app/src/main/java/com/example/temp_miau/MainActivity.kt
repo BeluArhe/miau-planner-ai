@@ -1,95 +1,89 @@
 package com.example.temp_miau
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.lifecycle.lifecycleScope
-import com.example.temp_miau.data.AppDatabase
-import com.example.temp_miau.data.RecipeAssetLoader
-import com.example.temp_miau.data.RecipeDao
-import com.example.temp_miau.logic.RecommendationEngine
-import com.example.temp_miau.logic.RespuestasEntrevista
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
+import com.example.temp_miau.ui.MainViewModel
+import com.example.temp_miau.ui.screens.DashboardScreen
+import com.example.temp_miau.ui.theme.Temp_miauTheme
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var viewModel: MainViewModel
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val activityRecognitionGranted = permissions[Manifest.permission.ACTIVITY_RECOGNITION] ?: false
+        val notificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
+        } else true
+
+        Log.d("MIAU_PERMISOS", "Reconocimiento de Actividad: $activityRecognitionGranted | Notificaciones: $notificationGranted")
+        if (activityRecognitionGranted) {
+            viewModel.stepSensorManager.startListening()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        inicializarDatosYProbar()
+        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+
+        solicitarPermisos()
 
         setContent {
-            // UI en Compose se conectará en las siguientes fases
-        }
-    }
-
-    private fun inicializarDatosYProbar() {
-        val database = AppDatabase.getDatabase(applicationContext)
-        val recipeDao = database.recipeDao()
-        val assetLoader = RecipeAssetLoader(applicationContext)
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                Log.d("MIAU_APP", "========================================")
-                Log.d("MIAU_APP", "😺 MIAU PLANNER AI - INICIANDO CARGA DE DATOS")
-
-                val totalExistentes = recipeDao.getAllRecipes().size
-                if (totalExistentes == 0) {
-                    Log.d("MIAU_APP", "Base de datos Room vacía. Leyendo 5,000 recetas desde assets/recipes.json...")
-                    val recipes = assetLoader.loadRecipesFromAssets("recipes.json")
-                    
-                    if (recipes.isNotEmpty()) {
-                        Log.d("MIAU_APP", "Insertando ${recipes.size} recetas en Room en lotes de 500...")
-                        // Inserción en bloques (chunks) para máximo rendimiento en SQLite
-                        recipes.chunked(500).forEachIndexed { index, batch ->
-                            recipeDao.insertRecipes(batch)
-                            Log.d("MIAU_APP", "  -> Lote ${index + 1}/${(recipes.size + 499) / 500} insertado (${batch.size} recetas)")
-                        }
-                        Log.d("MIAU_APP", "✔ ¡Total de ${recipes.size} recetas insertadas con éxito en Room!")
-                    } else {
-                        Log.w("MIAU_APP", "Advertencia: No se encontraron recetas en assets.")
-                    }
-                } else {
-                    Log.d("MIAU_APP", "Room ya contiene $totalExistentes recetas persistidas.")
-                }
-
-                // Probar el motor de IA con respuestas de prueba
-                probarRecommendationEngine(recipeDao)
-
-                Log.d("MIAU_APP", "========================================")
-            } catch (e: Exception) {
-                Log.e("MIAU_APP", "Error durante la inicialización de datos", e)
+            Temp_miauTheme {
+                DashboardScreen(viewModel = viewModel)
             }
         }
     }
 
-    private suspend fun probarRecommendationEngine(recipeDao: RecipeDao) {
-        Log.d("MIAU_ENGINE", "--- Prueba del Motor de IA (Árbol de Decisión) ---")
+    override fun onResume() {
+        super.onResume()
+        if (tienePermisoActividad()) {
+            viewModel.stepSensorManager.startListening()
+        }
+    }
 
-        // Ejemplo: Usuaria con energía media y tiempo moderado
-        val respuestasTest = RespuestasEntrevista(
-            tiempoDisponible = 1,    // Moderado
-            nivelEnergia = 1,        // Equilibrado
-            frecuenciaActividad = 1, // Moderada
-            estadoBienestar = 1,     // Folicular/Lútea
-            experienciaCocinando = 0 // Principiante
-        )
+    override fun onPause() {
+        super.onPause()
+        viewModel.stepSensorManager.stopListening()
+    }
 
-        val engine = RecommendationEngine()
-        val nivel = engine.calcularNivel(respuestasTest)
-        val difStr = engine.nivelToDificultadString(nivel)
-        val mensajeGatuno = engine.obtenerMensajeGatuno(nivel)
+    private fun tienePermisoActividad(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACTIVITY_RECOGNITION
+            ) == PackageManager.PERMISSION_GRANTED
+        } else true
+    }
 
-        Log.d("MIAU_ENGINE", "Nivel predicho: $nivel ('$difStr')")
-        Log.d("MIAU_ENGINE", "Mensaje del Avatar: $mensajeGatuno")
+    private fun solicitarPermisos() {
+        val permisos = mutableListOf<String>()
 
-        val recetasSugeridas = recipeDao.getRecipesByDificultad(difStr)
-        Log.d("MIAU_ENGINE", "Recetas sugeridas encontradas en Room para '$difStr': ${recetasSugeridas.size}")
-        recetasSugeridas.take(5).forEach { r ->
-            Log.d("MIAU_ENGINE", "  -> [${r.dificultad.uppercase()}] ${r.title} (${r.ingredients.size} ingredientes)")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                permisos.add(Manifest.permission.ACTIVITY_RECOGNITION)
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permisos.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        if (permisos.isNotEmpty()) {
+            requestPermissionLauncher.launch(permisos.toTypedArray())
         }
     }
 }
