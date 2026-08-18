@@ -6,124 +6,90 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import com.example.temp_miau.data.AppDatabase
-import com.example.temp_miau.data.DatasetBuilder
-import kotlinx.coroutines.launch
+import com.example.temp_miau.data.RecipeAssetLoader
 import com.example.temp_miau.data.RecipeDao
 import com.example.temp_miau.logic.RecommendationEngine
 import com.example.temp_miau.logic.RespuestasEntrevista
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        probarDatasetYRoom()
+        inicializarDatosYProbar()
 
         setContent {
-            // La interfaz se implementará en las siguientes fases.
+            // UI en Compose se conectará en las siguientes fases
         }
     }
 
-    private fun probarDatasetYRoom() {
-
+    private fun inicializarDatosYProbar() {
         val database = AppDatabase.getDatabase(applicationContext)
         val recipeDao = database.recipeDao()
-        val builder = DatasetBuilder(applicationContext)
+        val assetLoader = RecipeAssetLoader(applicationContext)
 
-        lifecycleScope.launch {
-
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
+                Log.d("MIAU_APP", "========================================")
+                Log.d("MIAU_APP", "😺 MIAU PLANNER AI - INICIANDO CARGA DE DATOS")
 
-                Log.d(
-                    "MIAU_ROOM",
-                    "========================================"
-                )
-
-                Log.d(
-                    "MIAU_ROOM",
-                    "Iniciando prueba DatasetBuilder + Room"
-                )
-
-                val recetasExistentes = recipeDao.getAllRecipes()
-                if (recetasExistentes.isEmpty()) {
-                    // 1. Descargar las recetas desde Spoonacular
-                    val recipes = builder.buildDataset(targetGoal = 100)
-                    Log.d(
-                        "MIAU_ROOM",
-                        "Recetas descargadas: ${recipes.size}"
-                    )
-                    // 2. Guardar las recetas en Room
-                    recipeDao.insertRecipes(recipes)
-                    Log.d(
-                        "MIAU_ROOM",
-                        "Recetas insertadas en Room: ${recipes.size}"
-                    )
+                val totalExistentes = recipeDao.getAllRecipes().size
+                if (totalExistentes == 0) {
+                    Log.d("MIAU_APP", "Base de datos Room vacía. Leyendo 5,000 recetas desde assets/recipes.json...")
+                    val recipes = assetLoader.loadRecipesFromAssets("recipes.json")
+                    
+                    if (recipes.isNotEmpty()) {
+                        Log.d("MIAU_APP", "Insertando ${recipes.size} recetas en Room en lotes de 500...")
+                        // Inserción en bloques (chunks) para máximo rendimiento en SQLite
+                        recipes.chunked(500).forEachIndexed { index, batch ->
+                            recipeDao.insertRecipes(batch)
+                            Log.d("MIAU_APP", "  -> Lote ${index + 1}/${(recipes.size + 499) / 500} insertado (${batch.size} recetas)")
+                        }
+                        Log.d("MIAU_APP", "✔ ¡Total de ${recipes.size} recetas insertadas con éxito en Room!")
+                    } else {
+                        Log.w("MIAU_APP", "Advertencia: No se encontraron recetas en assets.")
+                    }
                 } else {
-                    Log.d(
-                        "MIAU_ROOM",
-                        "Ya hay ${recetasExistentes.size} recetas en Room. No se vuelve a llamar a la API."
-                    )
+                    Log.d("MIAU_APP", "Room ya contiene $totalExistentes recetas persistidas.")
                 }
 
-                // 3. Recuperar las recetas desde Room
-                val storedRecipes = recipeDao.getAllRecipes()
-
-                Log.d(
-                    "MIAU_ROOM",
-                    "Recetas recuperadas desde Room: ${storedRecipes.size}"
-                )
-
-                // 4. Mostrar algunas recetas para comprobar que realmente existen
-                storedRecipes.take(5).forEach { recipe ->
-
-                    Log.d(
-                        "MIAU_ROOM",
-                        "ID=${recipe.id} | ${recipe.title}"
-                    )
-                }
+                // Probar el motor de IA con respuestas de prueba
                 probarRecommendationEngine(recipeDao)
-                Log.d(
-                    "MIAU_ROOM",
-                    "========================================"
-                )
 
+                Log.d("MIAU_APP", "========================================")
             } catch (e: Exception) {
-
-                Log.e(
-                    "MIAU_ROOM",
-                    "Error durante la prueba de Room",
-                    e
-                )
+                Log.e("MIAU_APP", "Error durante la inicialización de datos", e)
             }
-
         }
     }
 
     private suspend fun probarRecommendationEngine(recipeDao: RecipeDao) {
-        Log.d("MIAU_ENGINE", "========================================")
-        Log.d("MIAU_ENGINE", "Iniciando prueba de RecommendationEngine")
+        Log.d("MIAU_ENGINE", "--- Prueba del Motor de IA (Árbol de Decisión) ---")
 
-        val respuestasDePrueba = RespuestasEntrevista(
-            tiempoDisponible = 1,
-            nivelEnergia = 2,
-            frecuenciaActividad = 1,
-            estadoBienestar = 1,
-            experienciaCocinando = 0
+        // Ejemplo: Usuaria con energía media y tiempo moderado
+        val respuestasTest = RespuestasEntrevista(
+            tiempoDisponible = 1,    // Moderado
+            nivelEnergia = 1,        // Equilibrado
+            frecuenciaActividad = 1, // Moderada
+            estadoBienestar = 1,     // Folicular/Lútea
+            experienciaCocinando = 0 // Principiante
         )
 
         val engine = RecommendationEngine()
-        val nivelCalculado = engine.calcularNivel(respuestasDePrueba)
-        val dificultadString = engine.nivelToDificultadString(nivelCalculado)
+        val nivel = engine.calcularNivel(respuestasTest)
+        val difStr = engine.nivelToDificultadString(nivel)
+        val mensajeGatuno = engine.obtenerMensajeGatuno(nivel)
 
-        Log.d("MIAU_ENGINE", "Nivel calculado: $nivelCalculado ($dificultadString)")
+        Log.d("MIAU_ENGINE", "Nivel predicho: $nivel ('$difStr')")
+        Log.d("MIAU_ENGINE", "Mensaje del Avatar: $mensajeGatuno")
 
-        val recetasFiltradas = recipeDao.getRecipesByDificultad(dificultadString)
-        Log.d("MIAU_ENGINE", "Recetas encontradas con dificultad '$dificultadString': ${recetasFiltradas.size}")
-
-        recetasFiltradas.take(5).forEach { recipe ->
-            Log.d("MIAU_ENGINE", "ID=${recipe.id} | ${recipe.title} | dificultad=${recipe.dificultad}")
+        val recetasSugeridas = recipeDao.getRecipesByDificultad(difStr)
+        Log.d("MIAU_ENGINE", "Recetas sugeridas encontradas en Room para '$difStr': ${recetasSugeridas.size}")
+        recetasSugeridas.take(5).forEach { r ->
+            Log.d("MIAU_ENGINE", "  -> [${r.dificultad.uppercase()}] ${r.title} (${r.ingredients.size} ingredientes)")
         }
-
-        Log.d("MIAU_ENGINE", "========================================")
     }
 }
