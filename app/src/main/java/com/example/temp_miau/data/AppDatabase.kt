@@ -8,14 +8,15 @@ import androidx.room.TypeConverters
 import com.example.temp_miau.model.Recipe
 
 @Database(
-    entities = [Recipe::class],
-    version = 2,
+    entities = [Recipe::class, EntrevistaRegistro::class],
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun recipeDao(): RecipeDao
+    abstract fun entrevistaDao(): EntrevistaDao
 
     companion object {
 

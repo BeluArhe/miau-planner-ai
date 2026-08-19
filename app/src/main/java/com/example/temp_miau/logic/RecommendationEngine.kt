@@ -1,4 +1,5 @@
 package com.example.temp_miau.logic
+import kotlinx.serialization.Serializable
 
 /**
  * Niveles de dificultad para la rutina y recetas personalizadas.
@@ -16,6 +17,8 @@ enum class Nivel {
  * @param estadoBienestar 0: Menstruación / Fatiga, 1: Folicular/Lútea equilibrada, 2: Ovulación / Muy activa
  * @param experienciaCocinando 0: Principiante, 1: Intermedio, 2: Avanzado
  */
+
+@Serializable
 data class RespuestasEntrevista(
     val tiempoDisponible: Int,
     val nivelEnergia: Int,

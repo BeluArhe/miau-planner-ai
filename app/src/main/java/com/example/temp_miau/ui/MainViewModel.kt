@@ -16,6 +16,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.temp_miau.data.EntrevistaRegistro
+import com.example.temp_miau.security.CryptoManager
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -23,6 +28,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val recipeDao = database.recipeDao()
     private val assetLoader = RecipeAssetLoader(application)
     private val recommendationEngine = RecommendationEngine()
+    private val entrevistaDao = database.entrevistaDao()
+    private val cryptoManager = CryptoManager()
     val stepSensorManager = StepSensorManager(application)
 
     private val _totalRecipes = MutableStateFlow(0)
@@ -85,6 +92,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _currentLevel.value = nuevoNivel
         _isInterviewOpen.value = false
         fetchRandomRecipeForLevel(nuevoNivel)
+        guardarRegistroCifrado(respuestas, nuevoNivel)
+    }
+
+    private fun guardarRegistroCifrado(respuestas: RespuestasEntrevista, nivel: Nivel) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val payload = RegistroPayload(
+                respuestas = respuestas,
+                nivel = recommendationEngine.nivelToDificultadString(nivel)
+            )
+            val jsonPlano = Json.encodeToString(payload)
+            val (cifrado, iv) = cryptoManager.encrypt(jsonPlano)
+
+            entrevistaDao.insertRegistro(
+                EntrevistaRegistro(
+                    timestampMillis = System.currentTimeMillis(),
+                    datosCifrados = cifrado,
+                    iv = iv
+                )
+            )
+        }
     }
 
     fun fetchRandomRecipeForLevel(nivel: Nivel) {
@@ -121,3 +148,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return recommendationEngine.obtenerMensajeGatuno(_currentLevel.value)
     }
 }
+
+@Serializable
+data class RegistroPayload(
+    val respuestas: RespuestasEntrevista,
+    val nivel: String
+)
