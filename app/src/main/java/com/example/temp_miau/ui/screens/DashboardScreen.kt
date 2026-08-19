@@ -26,10 +26,8 @@ import com.example.temp_miau.model.Recipe
 import com.example.temp_miau.ui.MainViewModel
 import com.example.temp_miau.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(viewModel: MainViewModel) {
-    val isLoading by viewModel.isLoading.collectAsState()
     val totalRecipes by viewModel.totalRecipes.collectAsState()
     val currentSteps by viewModel.currentSteps.collectAsState()
     val catMood by viewModel.catMood.collectAsState()
@@ -41,51 +39,54 @@ fun DashboardScreen(viewModel: MainViewModel) {
 
     val avatars = listOf("Naranjito 🐱", "Siamés 🐾", "Blanquito ❄️", "Panterita 🖤")
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🐾 Miau Planner AI", fontWeight = FontWeight.Bold)
-                    }
-                },
-                actions = {
-                    Text(
-                        text = "$totalRecipes recetas",
-                        fontSize = 12.sp,
-                        color = MiauPeachDark,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(end = 16.dp)
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
-    ) { innerPadding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MiauBackgroundLight
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            // Header Superior Personalizado
+            Surface(
+                color = MiauSurfaceLight,
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = MiauPeachPrimary)
-                    Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "🐾 Tu gatito está cargando 5,000 recetas...",
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "🐾 Miau Planner AI",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MiauTextPrimary
                     )
+
+                    Surface(
+                        color = MiauPeachPrimary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (totalRecipes > 0) "$totalRecipes recetas" else "Cargando...",
+                            fontSize = 12.sp,
+                            color = MiauPeachDark,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
-        } else {
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -158,7 +159,7 @@ fun AvatarSelectorSection(
             text = "Elige tu compañero felino:",
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            color = MiauTextSecondary
         )
         Spacer(modifier = Modifier.height(6.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -166,10 +167,10 @@ fun AvatarSelectorSection(
                 val isSelected = (avatar == selectedAvatar)
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = if (isSelected) MiauPeachPrimary else MaterialTheme.colorScheme.surface,
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                    color = if (isSelected) MiauPeachPrimary else MiauSurfaceLight,
+                    border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                         brush = androidx.compose.ui.graphics.SolidColor(
-                            if (isSelected) MiauPeachDark else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            if (isSelected) MiauPeachDark else Color(0xFFE0D7D0)
                         )
                     ),
                     modifier = Modifier.clickable { onSelect(avatar) }
@@ -178,7 +179,7 @@ fun AvatarSelectorSection(
                         text = avatar,
                         fontSize = 12.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        color = if (isSelected) Color.White else MiauTextPrimary,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
@@ -195,7 +196,7 @@ fun CatHeroCard(
 ) {
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = MiauSurfaceLight),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -207,8 +208,8 @@ fun CatHeroCard(
                 modifier = Modifier
                     .size(90.dp)
                     .clip(CircleShape)
-                    .background(Color(catMood.colorHex).copy(alpha = 0.2f))
-                    .border(2.dp, Color(catMood.colorHex), CircleShape),
+                    .background(catMood.color.copy(alpha = 0.2f))
+                    .border(2.dp, catMood.color, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -223,13 +224,13 @@ fun CatHeroCard(
                 text = "$avatarName - ${catMood.titulo}",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MiauTextPrimary
             )
 
             Text(
                 text = catMood.mensaje,
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                color = MiauTextSecondary,
                 modifier = Modifier.padding(vertical = 6.dp)
             )
 
@@ -253,7 +254,7 @@ fun StepCounterCard(steps: Int, goal: Int) {
 
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MiauSurfaceLight),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -266,7 +267,8 @@ fun StepCounterCard(steps: Int, goal: Int) {
                 Text(
                     text = "👟 Actividad Física Diaria",
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MiauTextPrimary
                 )
                 Text(
                     text = "$steps / $goal pasos",
@@ -285,7 +287,7 @@ fun StepCounterCard(steps: Int, goal: Int) {
                     .height(10.dp)
                     .clip(RoundedCornerShape(5.dp)),
                 color = MiauMintTertiary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                trackColor = Color(0xFFECE5DF)
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -294,9 +296,9 @@ fun StepCounterCard(steps: Int, goal: Int) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                Text(text = "🔥 $kcal kcal quemadas", fontSize = 12.sp, color = MiauTextSecondary)
-                Text(text = "📍 ${"%.2f".format(km)} km recorridos", fontSize = 12.sp, color = MiauTextSecondary)
-                Text(text = "🎯 ${(progress * 100).toInt()}% de la meta", fontSize = 12.sp, color = MiauTextSecondary)
+                Text(text = "🔥 $kcal kcal", fontSize = 12.sp, color = MiauTextSecondary)
+                Text(text = "📍 ${"%.2f".format(km)} km", fontSize = 12.sp, color = MiauTextSecondary)
+                Text(text = "🎯 ${(progress * 100).toInt()}% meta", fontSize = 12.sp, color = MiauTextSecondary)
             }
         }
     }
@@ -316,7 +318,7 @@ fun AIRoutineCard(
 
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MiauSurfaceLight),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -329,7 +331,8 @@ fun AIRoutineCard(
                 Text(
                     text = "🧠 Rutina Recomendada por IA",
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MiauTextPrimary
                 )
                 Surface(
                     color = colorBadge.copy(alpha = 0.2f),
@@ -346,7 +349,7 @@ fun AIRoutineCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = greeting, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = greeting, fontSize = 13.sp, color = MiauTextPrimary)
 
             Spacer(modifier = Modifier.height(10.dp))
             OutlinedButton(
@@ -354,7 +357,7 @@ fun AIRoutineCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("📝 Rehacer Entrevista de Bienestar (5 Preguntas)")
+                Text("📝 Rehacer Entrevista de Bienestar (5 Preguntas)", color = MiauPeachDark)
             }
         }
     }
@@ -369,7 +372,7 @@ fun RecipeOfTheDayCard(
 ) {
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MiauSurfaceLight),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -382,7 +385,8 @@ fun RecipeOfTheDayCard(
                 Text(
                     text = "🥗 Receta Sugerida del Día",
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MiauTextPrimary
                 )
                 IconButton(onClick = onRefresh) {
                     Icon(
@@ -397,7 +401,7 @@ fun RecipeOfTheDayCard(
                 Text(
                     text = "Cargando sugerencia deliciosa...",
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MiauTextSecondary
                 )
             } else {
                 Text(
@@ -411,7 +415,8 @@ fun RecipeOfTheDayCard(
                 Text(
                     text = "Ingredientes principales:",
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = MiauTextPrimary
                 )
 
                 LazyRow(
@@ -421,11 +426,12 @@ fun RecipeOfTheDayCard(
                     items(recipe.ingredients.take(4)) { ing ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MiauPeachPrimary.copy(alpha = 0.1f)
+                            color = MiauPeachPrimary.copy(alpha = 0.12f)
                         ) {
                             Text(
                                 text = ing,
                                 fontSize = 11.sp,
+                                color = MiauTextPrimary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 maxLines = 1
                             )
@@ -441,7 +447,7 @@ fun RecipeOfTheDayCard(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MiauLavenderSecondary)
                 ) {
-                    Text("🌐 Ver Preparación en AllRecipes (WebView)", fontWeight = FontWeight.Bold)
+                    Text("🌐 Ver Preparación en AllRecipes (WebView)", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }

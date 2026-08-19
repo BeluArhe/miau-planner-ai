@@ -37,13 +37,13 @@ class MainActivity : ComponentActivity() {
 
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        solicitarPermisos()
-
         setContent {
             Temp_miauTheme {
                 DashboardScreen(viewModel = viewModel)
             }
         }
+
+        solicitarPermisos()
     }
 
     override fun onResume() {

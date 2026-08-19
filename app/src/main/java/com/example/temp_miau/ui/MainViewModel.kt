@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -26,16 +25,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val recommendationEngine = RecommendationEngine()
     val stepSensorManager = StepSensorManager(application)
 
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
     private val _totalRecipes = MutableStateFlow(0)
     val totalRecipes: StateFlow<Int> = _totalRecipes.asStateFlow()
 
     private val _currentLevel = MutableStateFlow(Nivel.MEDIO)
     val currentLevel: StateFlow<Nivel> = _currentLevel.asStateFlow()
 
-    private val _currentRecipe = MutableStateFlow<Recipe?>(null)
+    private val _currentRecipe = MutableStateFlow<Recipe?>(
+        Recipe(
+            title = "Bowl Energético de Salmón con Quinoa y Espárragos",
+            ingredients = listOf("1 filete de salmón fresco", "1 taza de quinoa cocida", "Espárragos trigueros", "Aceite de oliva"),
+            instructions = listOf("Dorar el salmón a la plancha", "Saltear los espárragos", "Servir sobre la quinoa tibia"),
+            sourceUrl = "https://www.allrecipes.com/recipe/228285/pan-seared-salmon-with-asparagus/",
+            dificultad = "medio"
+        )
+    )
     val currentRecipe: StateFlow<Recipe?> = _currentRecipe.asStateFlow()
 
     private val _isInterviewOpen = MutableStateFlow(false)
@@ -47,7 +51,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedAvatar = MutableStateFlow("Naranjito 🐱")
     val selectedAvatar: StateFlow<String> = _selectedAvatar.asStateFlow()
 
-    // Conectamos con el sensor manager
     val currentSteps: StateFlow<Int> = stepSensorManager.currentSteps
     val catMood: StateFlow<CatMood> = stepSensorManager.catMood
 
@@ -57,27 +60,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun initializeData() {
         viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
             try {
-                val existentes = recipeDao.getAllRecipes()
-                if (existentes.isEmpty()) {
+                var count = recipeDao.getRecipeCount()
+                if (count == 0) {
                     val recipes = assetLoader.loadRecipesFromAssets("recipes.json")
                     if (recipes.isNotEmpty()) {
                         recipes.chunked(500).forEach { batch ->
                             recipeDao.insertRecipes(batch)
                         }
                     }
+                    count = recipeDao.getRecipeCount()
                 }
 
-                val count = recipeDao.getAllRecipes().size
                 _totalRecipes.value = count
-
-                // Seleccionar una receta inicial recomendada
                 fetchRandomRecipeForLevel(_currentLevel.value)
             } catch (e: Exception) {
                 e.printStackTrace()
-            } finally {
-                _isLoading.value = false
             }
         }
     }
@@ -92,9 +90,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun fetchRandomRecipeForLevel(nivel: Nivel) {
         viewModelScope.launch(Dispatchers.IO) {
             val difStr = recommendationEngine.nivelToDificultadString(nivel)
-            val recetasNivel = recipeDao.getRecipesByDificultad(difStr)
-            if (recetasNivel.isNotEmpty()) {
-                _currentRecipe.value = recetasNivel.random()
+            val recipe = recipeDao.getRandomRecipeByDificultad(difStr)
+            if (recipe != null) {
+                _currentRecipe.value = recipe
             }
         }
     }

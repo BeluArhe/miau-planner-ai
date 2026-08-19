@@ -21,8 +21,11 @@ interface RecipeDao {
     @Query("SELECT * FROM recipes WHERE dificultad = :nivel")
     suspend fun getRecipesByDificultad(nivel: String): List<Recipe>
 
-    @Query("SELECT * FROM recipes WHERE id = :id")
-    suspend fun getRecipeById(id: Int): Recipe?
+    @Query("SELECT COUNT(*) FROM recipes")
+    suspend fun getRecipeCount(): Int
+
+    @Query("SELECT * FROM recipes WHERE dificultad = :nivel ORDER BY RANDOM() LIMIT 1")
+    suspend fun getRandomRecipeByDificultad(nivel: String): Recipe?
 
     @Query("DELETE FROM recipes")
     suspend fun deleteAllRecipes()

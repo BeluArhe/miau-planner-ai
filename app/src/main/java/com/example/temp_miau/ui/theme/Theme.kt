@@ -11,12 +11,13 @@ private val DarkColorScheme = darkColorScheme(
     primary = MiauPeachPrimary,
     secondary = MiauLavenderSecondary,
     tertiary = MiauMintTertiary,
-    background = Color(0xFF1E1B1B),
-    surface = Color(0xFF2B2626),
+    background = Color(0xFF181515),
+    surface = Color(0xFF262020),
+    surfaceVariant = Color(0xFF332B2B),
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = Color(0xFFEDE0D4),
-    onSurface = Color(0xFFEDE0D4)
+    onBackground = Color(0xFFF7ECE1),
+    onSurface = Color(0xFFF7ECE1)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -34,7 +35,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun Temp_miauTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Tema pastel cálido por defecto para la estética felina
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
