@@ -1,3 +1,14 @@
+/**
+ * NOTA DE ARQUITECTURA:
+ * Esta clase se usó durante el desarrollo para poblar la base de datos
+ * llamando en vivo a la API de Spoonacular. El proyecto final usa en su lugar
+ * [RecipeAssetLoader], que carga un recipes.json pre-generado desde assets/,
+ * para no depender de conectividad ni de límites de cuota de la API en cada
+ * uso de la app. Se conserva este archivo como referencia de cómo se
+ * construyó originalmente el dataset y como alternativa si se quisiera
+ * volver a un modelo de datos en vivo en el futuro.
+ */
+
 package com.example.temp_miau.data
 
 import android.content.Context

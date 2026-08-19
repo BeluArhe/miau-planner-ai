@@ -25,7 +25,12 @@ data class RespuestasEntrevista(
 )
 
 /**
- * Motor de recomendación de IA basado en el Árbol de Decisión entrenado con Scikit-learn.
+ * Motor de recomendación basado en un sistema de reglas ponderadas.
+ * Combina las 5 respuestas de la entrevista de bienestar con pesos distintos
+ * por factor (energía y estado de bienestar pesan más que tiempo/experiencia),
+ * más una regla de seguridad emocional: si energía y bienestar están en su
+ * nivel más bajo, se asigna siempre el nivel FACIL, priorizando el autocuidado
+ * por encima del puntaje numérico.
  */
 class RecommendationEngine {
 
