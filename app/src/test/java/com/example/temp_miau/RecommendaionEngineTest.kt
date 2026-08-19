@@ -16,9 +16,8 @@ class RecommendationEngineTest {
             estadoBienestar = 0,
             experienciaCocinando = 2
         )
-        // TODO: aunque tiempo/actividad/cocina estén en su máximo (2),
-        // energia=0 y bienestar=0 deben forzar Nivel.FACIL por la regla
-        // de seguridad emocional. Escribe el assertEquals aquí.
+        // Aunque tiempo/actividad/cocina estén al máximo, energia=0 y bienestar=0 fuerzan FACIL
+        assertEquals(Nivel.FACIL, engine.calcularNivel(respuestas))
     }
 
     @Test
@@ -30,9 +29,21 @@ class RecommendationEngineTest {
             estadoBienestar = 1,
             experienciaCocinando = 0
         )
-        // TODO: calcula el score a mano con la fórmula real:
-        // (tiempo*1.5) + (energia*2.0) + (actividad*1.0) + (bienestar*1.5) + (cocina*1.0)
-        // y confirma que cae en el rango de FACIL (<= 4.5)
+        // Score = (0*1.5) + (1*2.0) + (0*1.0) + (1*1.5) + (0*1.0) = 3.5 <= 4.5
+        assertEquals(Nivel.FACIL, engine.calcularNivel(respuestas))
+    }
+
+    @Test
+    fun `puntaje medio da MEDIO`() {
+        val respuestas = RespuestasEntrevista(
+            tiempoDisponible = 1,
+            nivelEnergia = 1,
+            frecuenciaActividad = 1,
+            estadoBienestar = 1,
+            experienciaCocinando = 1
+        )
+        // Score = 1.5 + 2.0 + 1.0 + 1.5 + 1.0 = 7.0 (Rango MEDIO > 4.5 y <= 8.0)
+        assertEquals(Nivel.MEDIO, engine.calcularNivel(respuestas))
     }
 
     @Test
@@ -44,8 +55,8 @@ class RecommendationEngineTest {
             estadoBienestar = 2,
             experienciaCocinando = 2
         )
-        // TODO: con energia=2 y bienestar=2, no se activa la regla de seguridad
-        // (esa regla solo aplica cuando AMBOS son 0). Calcula el score y confirma DIFICIL.
+        // Score = 3.0 + 4.0 + 2.0 + 3.0 + 2.0 = 14.0 (> 8.0)
+        assertEquals(Nivel.DIFICIL, engine.calcularNivel(respuestas))
     }
 
     @Test
