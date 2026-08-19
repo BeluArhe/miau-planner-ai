@@ -8,10 +8,17 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.temp_miau.ui.MainViewModel
 import com.example.temp_miau.ui.screens.DashboardScreen
+import com.example.temp_miau.ui.screens.SplashScreen
 import com.example.temp_miau.ui.theme.Temp_miauTheme
 
 class MainActivity : ComponentActivity() {
@@ -39,7 +46,21 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Temp_miauTheme {
-                DashboardScreen(viewModel = viewModel)
+                var showSplash by remember { mutableStateOf(true) }
+
+                Crossfade(
+                    targetState = showSplash,
+                    animationSpec = tween(600),
+                    label = "SplashToDashboardTransition"
+                ) { isSplash ->
+                    if (isSplash) {
+                        SplashScreen(
+                            onSplashFinished = { showSplash = false }
+                        )
+                    } else {
+                        DashboardScreen(viewModel = viewModel)
+                    }
+                }
             }
         }
 
