@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,7 +22,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.temp_miau.logic.BiometriaResultado
 import com.example.temp_miau.logic.Nivel
+import com.example.temp_miau.logic.UserProfile
 import com.example.temp_miau.model.Recipe
 import com.example.temp_miau.ui.MainViewModel
 import com.example.temp_miau.ui.theme.*
@@ -34,6 +37,9 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val currentLevel by viewModel.currentLevel.collectAsState()
     val currentRecipe by viewModel.currentRecipe.collectAsState()
     val isInterviewOpen by viewModel.isInterviewOpen.collectAsState()
+    val isProfileOpen by viewModel.isProfileOpen.collectAsState()
+    val userProfile by viewModel.userProfile.collectAsState()
+    val biometria by viewModel.biometria.collectAsState()
     val selectedRecipeUrl by viewModel.selectedRecipeUrl.collectAsState()
     val selectedAvatar by viewModel.selectedAvatar.collectAsState()
 
@@ -69,17 +75,30 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         color = MiauTextPrimary
                     )
 
-                    Surface(
-                        color = MiauPeachPrimary.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = if (totalRecipes > 0) "$totalRecipes recetas" else "Cargando...",
-                            fontSize = 12.sp,
-                            color = MiauPeachDark,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = MiauPeachPrimary.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = if (totalRecipes > 0) "$totalRecipes recetas" else "Cargando...",
+                                fontSize = 12.sp,
+                                color = MiauPeachDark,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.setProfileOpen(true) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Editar Perfil",
+                                tint = MiauPeachDark
+                            )
+                        }
                     }
                 }
             }
@@ -105,20 +124,27 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     onSimulateStep = { viewModel.simulateSteps(500) }
                 )
 
-                // 2. Tarjeta del Contador de Pasos
+                // 2. Tarjeta del Perfil Biométrico, IMC y Metas de Salud
+                BiometricsCard(
+                    profile = userProfile,
+                    biometria = biometria,
+                    onOpenProfile = { viewModel.setProfileOpen(true) }
+                )
+
+                // 3. Tarjeta del Contador de Pasos
                 StepCounterCard(
                     steps = currentSteps,
                     goal = viewModel.stepSensorManager.dailyGoal
                 )
 
-                // 3. Tarjeta de Rutina y Bienestar IA
+                // 4. Tarjeta de Rutina y Bienestar IA
                 AIRoutineCard(
                     level = currentLevel,
                     greeting = viewModel.getCatGreeting(),
                     onOpenInterview = { viewModel.setInterviewOpen(true) }
                 )
 
-                // 4. Tarjeta de Receta Sugerida del Día
+                // 5. Tarjeta de Receta Sugerida del Día
                 RecipeOfTheDayCard(
                     recipe = currentRecipe,
                     level = currentLevel,
@@ -128,6 +154,15 @@ fun DashboardScreen(viewModel: MainViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+
+        // Diálogo de Perfil Físico, IMC y Metas de Salud
+        if (isProfileOpen) {
+            ProfileDialog(
+                initialProfile = userProfile,
+                onDismiss = { viewModel.setProfileOpen(false) },
+                onSave = { updatedProfile -> viewModel.saveUserProfile(updatedProfile) }
+            )
         }
 
         // Diálogo de Entrevista de 5 Preguntas
@@ -144,6 +179,116 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 url = url,
                 onClose = { viewModel.closeRecipeUrl() }
             )
+        }
+    }
+}
+
+@Composable
+fun BiometricsCard(
+    profile: UserProfile,
+    biometria: BiometriaResultado,
+    onOpenProfile: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MiauSurfaceLight),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = profile.objetivoSalud.emoji, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Mi Perfil & Salud",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MiauTextPrimary
+                    )
+                }
+
+                Surface(
+                    color = Color(biometria.categoriaImc.colorHex).copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "IMC: ${biometria.imc} (${biometria.categoriaImc.nombre})",
+                        color = Color(biometria.categoriaImc.colorHex),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Datos Clave en Fila
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(text = "Estatura / Peso", fontSize = 11.sp, color = MiauTextSecondary)
+                    Text(
+                        text = "${profile.alturaCm.toInt()} cm • ${profile.pesoKg.toInt()} kg",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MiauTextPrimary
+                    )
+                }
+
+                Column {
+                    Text(text = "🔥 Meta Calórica", fontSize = 11.sp, color = MiauTextSecondary)
+                    Text(
+                        text = "~${biometria.caloriasMeta} kcal/día",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MiauPeachDark
+                    )
+                }
+
+                Column {
+                    Text(text = "💧 Agua Diaria", fontSize = 11.sp, color = MiauTextSecondary)
+                    Text(
+                        text = "${biometria.aguaLitrosDiarios} L",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MiauLavenderSecondary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Consejo del gatito sobre su objetivo
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MiauBackgroundLight,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = biometria.consejoGatuno,
+                    fontSize = 12.sp,
+                    color = MiauTextPrimary,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onOpenProfile,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("⚙️ Ajustar Altura, Peso y Metas", color = MiauPeachDark, fontSize = 12.sp)
+            }
         }
     }
 }
