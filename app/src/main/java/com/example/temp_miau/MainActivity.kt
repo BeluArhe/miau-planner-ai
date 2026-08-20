@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.temp_miau.ui.MainViewModel
 import com.example.temp_miau.ui.screens.DashboardScreen
+import com.example.temp_miau.ui.screens.InitialOnboardingScreen
 import com.example.temp_miau.ui.screens.SplashScreen
 import com.example.temp_miau.ui.theme.Temp_miauTheme
 
@@ -47,18 +49,33 @@ class MainActivity : ComponentActivity() {
         setContent {
             Temp_miauTheme {
                 var showSplash by remember { mutableStateOf(true) }
+                val isInitialSetupCompleted by viewModel.isInitialSetupCompleted.collectAsState()
 
                 Crossfade(
-                    targetState = showSplash,
+                    targetState = when {
+                        showSplash -> AppScreenState.SPLASH
+                        !isInitialSetupCompleted -> AppScreenState.ONBOARDING
+                        else -> AppScreenState.DASHBOARD
+                    },
                     animationSpec = tween(600),
-                    label = "SplashToDashboardTransition"
-                ) { isSplash ->
-                    if (isSplash) {
-                        SplashScreen(
-                            onSplashFinished = { showSplash = false }
-                        )
-                    } else {
-                        DashboardScreen(viewModel = viewModel)
+                    label = "AppScreenNavigation"
+                ) { screenState ->
+                    when (screenState) {
+                        AppScreenState.SPLASH -> {
+                            SplashScreen(
+                                onSplashFinished = { showSplash = false }
+                            )
+                        }
+                        AppScreenState.ONBOARDING -> {
+                            InitialOnboardingScreen(
+                                onComplete = { profile, respuestas ->
+                                    viewModel.completeInitialSetup(profile, respuestas)
+                                }
+                            )
+                        }
+                        AppScreenState.DASHBOARD -> {
+                            DashboardScreen(viewModel = viewModel)
+                        }
                     }
                 }
             }
@@ -107,4 +124,8 @@ class MainActivity : ComponentActivity() {
             requestPermissionLauncher.launch(permisos.toTypedArray())
         }
     }
+}
+
+enum class AppScreenState {
+    SPLASH, ONBOARDING, DASHBOARD
 }

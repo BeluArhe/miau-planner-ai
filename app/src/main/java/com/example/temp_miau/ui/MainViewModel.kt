@@ -33,6 +33,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val sharedPrefs = application.getSharedPreferences("miau_secure_profile", Context.MODE_PRIVATE)
 
+    private val _isInitialSetupCompleted = MutableStateFlow(
+        sharedPrefs.getBoolean("initial_setup_completed", false)
+    )
+    val isInitialSetupCompleted: StateFlow<Boolean> = _isInitialSetupCompleted.asStateFlow()
+
     private val _totalRecipes = MutableStateFlow(0)
     val totalRecipes: StateFlow<Int> = _totalRecipes.asStateFlow()
 
@@ -97,6 +102,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun completeInitialSetup(profile: UserProfile, respuestas: RespuestasEntrevista) {
+        saveUserProfile(profile)
+        submitInterview(respuestas)
+        _isInitialSetupCompleted.value = true
+        sharedPrefs.edit().putBoolean("initial_setup_completed", true).apply()
     }
 
     fun submitInterview(respuestas: RespuestasEntrevista) {
